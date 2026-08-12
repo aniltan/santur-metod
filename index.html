@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Santur Metod</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:#1a1410;color:#e8dcc8;font-family:Georgia,serif}
+.card{text-align:center;padding:2rem;max-width:320px}
+h1{font-size:1.4rem;font-weight:normal;letter-spacing:.15em;margin-bottom:.3rem}
+.sub{opacity:.55;font-size:.85rem;margin-bottom:1.6rem}
+input[type=password]{width:100%;box-sizing:border-box;padding:.7rem 1rem;font-size:1.1rem;text-align:center;
+background:#2a2118;border:1px solid #5a4a35;border-radius:8px;color:#e8dcc8;outline:none}
+input[type=password]:focus{border-color:#c9a86a}
+button{margin-top:1rem;width:100%;padding:.7rem;font-size:1rem;background:#c9a86a;color:#1a1410;
+border:none;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:.05em}
+label{display:flex;gap:.4rem;justify-content:center;align-items:center;margin-top:.9rem;font-size:.8rem;opacity:.7}
+#msg{margin-top:.8rem;font-size:.85rem;min-height:1.2em;color:#d98c8c}
+</style></head><body><div class="card">
+<h1>SANTUR METOD</h1><div class="sub">Nihâvend Repertuvarı · özel çalışma</div>
+<form id="f"><input type="password" id="pw" placeholder="parola" autofocus autocomplete="current-password">
+<button type="submit">Aç</button>
+<label><input type="checkbox" id="rm" checked> bu cihazda hatırla</label>
+<div id="msg"></div></form></div>
+<script>
+const $=id=>document.getElementById(id);
+async function unlock(pass){
+  $('msg').textContent='açılıyor…';$('msg').style.color='#c9a86a';
+  const buf=await (await fetch('app.enc')).arrayBuffer();
+  const u=new Uint8Array(buf), salt=u.slice(0,16), nonce=u.slice(16,28), ct=u.slice(28);
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+  let pt;try{pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:nonce},key,ct);}
+  catch(e){$('msg').style.color='#d98c8c';$('msg').textContent='parola yanlış';localStorage.removeItem('smk');return;}
+  if($('rm')&&$('rm').checked)localStorage.setItem('smk',pass);
+  const html=new TextDecoder().decode(pt);
+  document.open();document.write(html);document.close();
+}
+$('f').addEventListener('submit',e=>{e.preventDefault();unlock($('pw').value.trim());});
+const saved=localStorage.getItem('smk');if(saved){$('pw').value=saved;unlock(saved);}
+</script></body></html>
